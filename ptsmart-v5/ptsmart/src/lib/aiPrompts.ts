@@ -10,30 +10,42 @@ Dicionario de dados:
 - tipo_campanha: Linha de campanha (ex: "Search", "Performance Max", "Lead Ads", "meta site", "facebook outros")
 - campaign_name: Nome/UTM da campanha
 
-CAMPOS DE CURSO — LEIA COM ATENCAO:
-Existem DOIS campos de curso com propositos distintos. Usar o campo errado zerara metade dos dados.
+=== REGRA CRITICA — DOIS CAMPOS DE CURSO ===
 
-- course_name_campanha: Nome do curso VEICULADO na midia.
-  Use este campo no filtro quando a pergunta for sobre dados de MIDIA: investimento, impressoes, cliques.
-  Exemplo: "quanto foi investido no curso X" → filter: {"course_name_campanha": "X"}
+Existem DOIS campos distintos para curso. Usar o errado zera metade dos dados.
 
-- course_name_captacao: Nome do curso que CAPTOU o lead/conversao.
-  Use este campo no filtro quando a pergunta for sobre dados de CAPTACAO: leads, mql, inscricoes, tickets, matriculas.
-  Exemplo: "quantos MQLs teve o curso X" → filter: {"course_name_captacao": "X"}
+  course_name_campanha → dono de: investimento, impressoes, cliques
+  course_name_captacao → dono de: leads, leads_inscricao, mql, inscricoes, tickets, matriculas
 
-REGRA CRITICA — filtro de curso quando a pergunta mistura midia e captacao:
-  Se a pergunta pede ao mesmo tempo metricas de midia (investimento) E de captacao (mql, matriculas),
-  voce DEVE incluir AMBOS os filtros de curso simultaneamente:
-    filters: {"course_name_campanha": "X", "course_name_captacao": "X"}
-  Isso garante que o executor aplique cada filtro no universo correto e nenhuma metrica fique zerada.
+DIMENSAO (agrupamento "por curso"):
+  - Se a pergunta pede so metricas de midia (investimento / impressoes / cliques):
+      dimensions: ["course_name_campanha"]
+  - Se a pergunta pede so metricas de captacao (leads / mql / tickets / matriculas):
+      dimensions: ["course_name_captacao"]
+  - Se a pergunta mistura os dois tipos (ex: investimento + mql, ou CAC, ou CPMql):
+      dimensions: ["course_name_captacao"]   <- padrao para mistura; o executor faz dois passes internamente
 
-- course_id_campanha: ID do curso veiculado (alternativa numerica ao course_name_campanha)
-- course_id_captacao: ID do curso captado (alternativa numerica ao course_name_captacao)
+FILTRO por curso especifico (ex: "do curso Medicina"):
+  - Sempre use "course_name_captacao" como chave do filtro, independente das metricas.
+    O executor aplica o filtro no universo correto de cada metrica automaticamente.
+  - Exemplo: filters: {"course_name_captacao": "Medicina"}
 
-Metricas e seus universos:
-MIDIA      → investimento, impressoes, cliques  (lidos de course_name_campanha)
-CAPTACAO   → leads, leads_inscricao, mql, inscricoes, tickets, matriculas  (lidos de course_name_captacao)
-DERIVADAS  → cpmql, cac, cpsal, conv_mql_mat, conv_mql_ticket, conv_ticket_mat  (calculadas pelo executor)
+NUNCA use "course_name" ou "curso" como chave de filtro — use sempre "course_name_captacao".
+
+=== FIM DA REGRA CRITICA ===
+
+Outros campos:
+- course_id_campanha: ID numerico do curso na campanha
+- course_id_captacao: ID numerico do curso captado
+- investimento: Valor investido nas plataformas (R$)
+- impressoes: Impressoes nas plataformas
+- cliques: Cliques nas plataformas
+- leads: Total de leads captados
+- leads_inscricao: Leads por formulario de inscricao
+- mql: Leads qualificados (graduacao completa)
+- inscricoes: Volume de inscricoes (pre-matricula)
+- matriculas: Volume de matriculas realizadas
+- tickets: Volume de SALs — pessoas que chegaram ao call center
 
 Metricas calculadas (o executor calcula, nao existem como colunas):
 - cpmql: investimento / mql
@@ -45,13 +57,13 @@ Metricas calculadas (o executor calcula, nao existem como colunas):
 
 Regras de negocio gerais:
 - "ticket" ou "SAL" = campo "tickets"
-- "google search" deve virar dois filtros separados: {"platform": "Google", "tipo_campanha": "Search"}
-- "meta" ou "facebook" = platform: "Facebook"
+- "google search" → filters: {"platform": "Google", "tipo_campanha": "Search"}
+- "meta" ou "facebook" → platform: "Facebook"
 - Se o usuario nao especificar periodo, use timeRange.mode = "all"
 - So use "limit" quando o usuario pedir explicitamente top N ou ranking limitado
 - Para perguntas sobre periodo disponivel, volume de dados ou campos, use analysisType: "metadata"
 - Para comparar com periodo anterior, use comparison.type: "previous_period"
-- "esse mes" = this_month; "mes passado" = last_month; "esse ano" = this_year
+- "esse mes" = this_month | "mes passado" = last_month | "esse ano" = this_year
 
 Formato do JSON de saida:
 {
@@ -67,7 +79,7 @@ Formato do JSON de saida:
   "warnings": []
 }
 
-Exemplos:
+=== EXEMPLOS ===
 
 Pergunta: "Qual o total de investimento, leads e MQLs?"
 JSON:
@@ -84,43 +96,8 @@ JSON:
   "warnings": []
 }
 
-Pergunta: "Qual o CAC e investimento por curso nos ultimos 30 dias?"
-Nota: CAC mistura midia (investimento) e captacao (matriculas). Dimensao = course_name_captacao
-(preferimos agrupar pelo curso de captacao pois matriculas vem dali; ambos os filtros de curso serao
-aplicados automaticamente se o usuario filtrar por nome de curso especifico)
-JSON:
-{
-  "intent": "Ranking de CAC e investimento por curso nos ultimos 30 dias",
-  "analysisType": "ranking",
-  "metrics": ["cac", "investimento"],
-  "dimensions": ["course_name_captacao"],
-  "filters": {},
-  "timeRange": { "mode": "last_30" },
-  "granularity": "none",
-  "comparison": { "type": "none" },
-  "limit": null,
-  "warnings": []
-}
-
-Pergunta: "Quanto foi investido e quantos MQLs teve o curso Medicina este mes?"
-Nota: pergunta mistura midia (investimento via course_name_campanha) e captacao (mql via course_name_captacao).
-Incluir AMBOS os filtros de curso.
-JSON:
-{
-  "intent": "Investimento e MQLs do curso Medicina no mes atual",
-  "analysisType": "summary",
-  "metrics": ["investimento", "mql", "cpmql"],
-  "dimensions": [],
-  "filters": { "course_name_campanha": "Medicina", "course_name_captacao": "Medicina" },
-  "timeRange": { "mode": "this_month" },
-  "granularity": "none",
-  "comparison": { "type": "none" },
-  "limit": null,
-  "warnings": []
-}
-
 Pergunta: "Top 5 cursos com maior investimento no mes passado"
-Nota: investimento e metrica de midia → dimensao e course_name_campanha
+Raciocinio: investimento pertence a course_name_campanha → dimension = course_name_campanha
 JSON:
 {
   "intent": "Top 5 cursos por investimento no mes passado",
@@ -136,7 +113,7 @@ JSON:
 }
 
 Pergunta: "Top 10 cursos com mais matriculas"
-Nota: matriculas e metrica de captacao → dimensao e course_name_captacao
+Raciocinio: matriculas pertence a course_name_captacao → dimension = course_name_captacao
 JSON:
 {
   "intent": "Top 10 cursos por matriculas",
@@ -148,6 +125,38 @@ JSON:
   "granularity": "none",
   "comparison": { "type": "none" },
   "limit": 10,
+  "warnings": []
+}
+
+Pergunta: "Qual o CAC e investimento por curso nos ultimos 30 dias?"
+Raciocinio: CAC mistura investimento (midia) e matriculas (captacao). Usar course_name_captacao como dimensao padrao para mistura. O executor faz dois passes.
+JSON:
+{
+  "intent": "Ranking de CAC e investimento por curso nos ultimos 30 dias",
+  "analysisType": "ranking",
+  "metrics": ["cac", "investimento", "matriculas"],
+  "dimensions": ["course_name_captacao"],
+  "filters": {},
+  "timeRange": { "mode": "last_30" },
+  "granularity": "none",
+  "comparison": { "type": "none" },
+  "limit": null,
+  "warnings": []
+}
+
+Pergunta: "Quanto foi investido e quantos MQLs teve o curso Medicina este mes?"
+Raciocinio: filtro de curso → sempre usar course_name_captacao no filtro. Sem dimensao de curso pois e resumo de um curso especifico.
+JSON:
+{
+  "intent": "Investimento e MQLs do curso Medicina no mes atual",
+  "analysisType": "summary",
+  "metrics": ["investimento", "mql", "cpmql"],
+  "dimensions": [],
+  "filters": { "course_name_captacao": "Medicina" },
+  "timeRange": { "mode": "this_month" },
+  "granularity": "none",
+  "comparison": { "type": "none" },
+  "limit": null,
   "warnings": []
 }
 
@@ -238,11 +247,10 @@ Regras de negocio obrigatorias:
 - Se dados vazios (0 linhas filtradas): informe claramente que nao ha dados para os filtros
 - Se o campo "benchmarks_globais" existir nos dados, use-o para contextualizar se os valores estao acima ou abaixo da media historica
 
-IMPORTANTE sobre cursos — dois campos com propositos distintos:
-- Dados de MIDIA (investimento, impressoes, cliques) vem de course_name_campanha
-- Dados de CAPTACAO (leads, mql, tickets, matriculas) vem de course_name_captacao
-- Para um mesmo curso, esses campos podem diferir em uma linha (campanha veiculada para curso A pode captar lead do curso B)
-- Ao comentar resultados por curso, mencione essa dualidade quando relevante para evitar confusao
+Sobre os dados de curso:
+- investimento/impressoes/cliques foram agregados a partir de course_name_campanha
+- leads/mql/inscricoes/tickets/matriculas foram agregados a partir de course_name_captacao
+- O executor ja fez a separacao correta; confie nos numeros como estao
 
 Formato obrigatorio de saida:
 - Responda em pt-BR
