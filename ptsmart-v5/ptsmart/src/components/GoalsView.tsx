@@ -86,7 +86,7 @@ function aggregateActual(
   const map = new Map<string, MetricSet>();
   const dateField     = findField(availableKeys, 'data', 'date', 'created_at');
   const invField      = findField(availableKeys, 'investimento', 'investment', 'custo');
-  const leadsField    = findField(availableKeys, 'leads');
+  const mqlField      = findField(availableKeys, 'mql', 'mqls');
   const matField      = findField(availableKeys, 'matriculas', 'matricula', 'matrículas');
   const platformField = findField(availableKeys, 'platform');
   const tipoField     = findField(availableKeys, 'tipo_campanha');
@@ -108,7 +108,7 @@ function aggregateActual(
     if (!map.has(bu)) map.set(bu, { investimento: 0, leads: 0, matriculas: 0 });
     const buRow = map.get(bu)!;
     buRow.investimento += safeNum(d[invField ?? '']);
-    buRow.leads        += safeNum(d[leadsField ?? '']);
+    buRow.leads        += safeNum(d[mqlField ?? '']);
     buRow.matriculas   += safeNum(d[matField ?? '']);
 
     // Canal×BU key
@@ -116,7 +116,7 @@ function aggregateActual(
     if (!map.has(ck)) map.set(ck, { investimento: 0, leads: 0, matriculas: 0 });
     const ckRow = map.get(ck)!;
     ckRow.investimento += safeNum(d[invField ?? '']);
-    ckRow.leads        += safeNum(d[leadsField ?? '']);
+    ckRow.leads        += safeNum(d[mqlField ?? '']);
     ckRow.matriculas   += safeNum(d[matField ?? '']);
   }
 
@@ -167,8 +167,8 @@ export function GoalsView({ data }: { data: any[] }) {
     const dates = data.map(d => parseLocalDate(d[df])).filter(d => !isNaN(d.getTime()));
     if (!dates.length) return { minDate: '', maxDate: '' };
     return {
-      minDate: new Date(Math.min(...dates.map(d => d.getTime()))).toISOString().split('T')[0],
-      maxDate: new Date(Math.max(...dates.map(d => d.getTime()))).toISOString().split('T')[0],
+      minDate: new Date(dates.reduce((a, b) => a.getTime() < b.getTime() ? a : b).getTime()).toISOString().split('T')[0],
+      maxDate: new Date(dates.reduce((a, b) => a.getTime() > b.getTime() ? a : b).getTime()).toISOString().split('T')[0],
     };
   }, [data, availableKeys]);
 
@@ -358,7 +358,7 @@ export function GoalsView({ data }: { data: any[] }) {
                   Investimento
                 </th>
                 <th colSpan={3} className="px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-sky-700 border-l border-slate-200">
-                  Leads
+                  MQL
                 </th>
                 <th colSpan={3} className="px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-emerald-700 border-l border-slate-200">
                   Matrículas
@@ -422,7 +422,7 @@ export function GoalsView({ data }: { data: any[] }) {
                         <DeltaBadge real={row.real.investimento} meta={row.meta.investimento} />
                       </td>
                       <td className="px-3 py-3"><Gauge value={pctInv} /></td>
-                      {/* Leads */}
+                      {/* MQL */}
                       <td className="px-3 py-3 text-right tabular-nums text-slate-600 border-l border-slate-100">{fmtInt(Math.round(row.meta.leads))}</td>
                       <td className="px-3 py-3 text-right tabular-nums text-slate-800 font-medium">
                         {fmtInt(row.real.leads)}
