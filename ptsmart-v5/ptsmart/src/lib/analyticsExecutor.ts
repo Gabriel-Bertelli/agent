@@ -392,18 +392,17 @@ function finalise(
     if (metricsLower.includes('conv_mql_ticket')) g.conv_mql_ticket = mql > 0 ? (sal / mql) * 100 : null;
     if (metricsLower.includes('conv_ticket_mat')) g.conv_ticket_mat = sal > 0 ? (mat / sal) * 100 : null;
 
-    // Always expose base accumulators as named fields.
-    // Derived metrics (cac, cpmql…) use the private accumulators for calculation,
-    // but the output row must also show the named fields so the Analyst can display
-    // them — even when the Planner didn't list them explicitly in plan.metrics.
-    if (g.investimento == null) g.investimento = g._inv  ?? 0;
-    if (g.impressoes   == null) g.impressoes   = g._imp  ?? 0;
-    if (g.cliques      == null) g.cliques      = g._cliq ?? 0;
-    if (g.mql          == null) g.mql          = g._mql  ?? 0;
-    if (g.leads        == null) g.leads        = g._leads ?? 0;
-    if (g.matriculas   == null) g.matriculas   = g._mat  ?? 0;
-    if (g.tickets      == null) g.tickets      = g._sal  ?? 0;
-    if (g.inscricoes   == null) g.inscricoes   = g._ins  ?? 0;
+    // Always overwrite named fields from their private accumulators.
+    // Do NOT use == null guard: fields may be initialised to 0 by ensureGroup,
+    // which would prevent the real accumulated value from being written.
+    g.investimento = g._inv   ?? 0;
+    g.impressoes   = g._imp   ?? 0;
+    g.cliques      = g._cliq  ?? 0;
+    g.mql          = g._mql   ?? 0;
+    g.leads        = g._leads ?? 0;
+    g.matriculas   = g._mat   ?? 0;
+    g.tickets      = g._sal   ?? 0;
+    g.inscricoes   = g._ins   ?? 0;
 
     delete g._inv;  delete g._imp;  delete g._cliq;
     delete g._leads; delete g._leadsIns;
