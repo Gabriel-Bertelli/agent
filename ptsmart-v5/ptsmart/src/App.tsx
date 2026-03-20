@@ -10,10 +10,11 @@
 
 import React, { useState, useMemo } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { Database, Loader2, AlertCircle, LogOut, LayoutDashboard, Filter, Calendar, Tag, Box, TrendingUp, Sparkles, Download, Table as TableIcon, Lock, Eye, EyeOff } from 'lucide-react';
+import { Database, Loader2, AlertCircle, LogOut, LayoutDashboard, Filter, Calendar, Tag, Box, TrendingUp, Sparkles, Download, Table as TableIcon, Lock, Eye, EyeOff, GraduationCap } from 'lucide-react';
 import { BarChart, Bar, Legend, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList, LineChart, Line, ComposedChart } from 'recharts';
 import { format, isValid } from 'date-fns';
 import { AIAssistant } from './components/AIAssistant';
+import { CourseTable } from './components/CourseTable';
 
 // Configurações do Supabase (Pré-configuradas)
 const SUPABASE_URL = 'https://ackubuuqjwsxlrluomuw.supabase.co';
@@ -1388,7 +1389,7 @@ export default function App() {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [view, setView] = useState<'table' | 'dashboard' | 'ai'>('dashboard');
+  const [view, setView] = useState<'table' | 'dashboard' | 'ai' | 'courses'>('dashboard');
   const [tableName, setTableName] = useState(DEFAULT_TABLE_NAME);
   
   // Advanced filters
@@ -1568,6 +1569,13 @@ export default function App() {
               Tabela de Dados
             </button>
             <button 
+              onClick={() => setView('courses')} 
+              className={`pb-3 px-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${view === 'courses' ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+            >
+              <GraduationCap className="w-4 h-4" />
+              Cursos
+            </button>
+            <button 
               onClick={() => setView('ai')} 
               className={`pb-3 px-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${view === 'ai' ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
             >
@@ -1578,6 +1586,8 @@ export default function App() {
 
           {view === 'dashboard' ? (
             <Dashboard data={data} />
+          ) : view === 'courses' ? (
+            <CourseTable data={data} />
           ) : view === 'ai' ? (
             <AIAssistant data={data} />
           ) : (
