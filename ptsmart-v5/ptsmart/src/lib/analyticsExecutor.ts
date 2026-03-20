@@ -435,11 +435,3 @@ function finalise(
     allResults: sorted,
   };
 }
-
-// re-export parseLocalDate for use in finalise closure
-function parseLocalDate(dateStr: string | number | Date): Date {
-  if (!dateStr) return new Date(NaN);
-  if (dateStr instanceof Date) return dateStr;
-  const str = String(dateStr).split('T')[0].split(' ')[0];
-  return new Date(`${str}T00:00:00`);
-}
