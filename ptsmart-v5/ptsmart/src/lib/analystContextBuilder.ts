@@ -50,9 +50,20 @@ function summarizeMetric(results: any[], metric: string) {
   };
 }
 
+const safeN = (v: any) => {
+  const n = parseFloat(String(v ?? '').replace(',', '.'));
+  return Number.isFinite(n) && n >= 0 ? n : 0;
+};
+
 /**
- * Build dynamic benchmarks from the FULL dataset (not the filtered subset)
- * so the analyst always has context about what "normal" looks like.
+ * Build dynamic benchmarks from the FULL dataset.
+ *
+ * IMPORTANT — dual-field rule:
+ *   investimento comes from rows regardless of course_name_campanha/captacao
+ *   because at the global level we want the full total.
+ *   The same applies to mql, tickets, matriculas.
+ *   This is consistent with the executePlan behaviour when no course filter is active:
+ *   every row contributes to both universes.
  */
 export function buildBenchmarks(allData: any[]): string {
   if (!allData || allData.length < 10) return '';
@@ -65,30 +76,26 @@ export function buildBenchmarks(allData: any[]): string {
   const salKey = find('tickets', 'ticket');
   const matKey = find('matriculas', 'matricula');
 
-  const safeN = (v: any) => {
-    const n = parseFloat(String(v ?? '').replace(',', '.'));
-    return Number.isFinite(n) && n >= 0 ? n : 0;
-  };
-
   const totalInv = allData.reduce((s, d) => s + safeN(d[invKey!]), 0);
   const totalMql = allData.reduce((s, d) => s + safeN(d[mqlKey!]), 0);
   const totalSal = allData.reduce((s, d) => s + safeN(d[salKey!]), 0);
   const totalMat = allData.reduce((s, d) => s + safeN(d[matKey!]), 0);
 
-  const cpmql          = totalMql > 0 ? totalInv / totalMql        : null;
-  const cac            = totalMat > 0 ? totalInv / totalMat        : null;
-  const cpsal          = totalSal > 0 ? totalInv / totalSal        : null;
-  const convMqlMat     = totalMql > 0 ? (totalMat / totalMql)*100  : null;
-  const convMqlSal     = totalMql > 0 ? (totalSal / totalMql)*100  : null;
-  const convSalMat     = totalSal > 0 ? (totalMat / totalSal)*100  : null;
+  const cpmql      = totalMql > 0 ? totalInv / totalMql       : null;
+  const cac        = totalMat > 0 ? totalInv / totalMat       : null;
+  const cpsal      = totalSal > 0 ? totalInv / totalSal       : null;
+  const convMqlMat = totalMql > 0 ? (totalMat / totalMql)*100 : null;
+  const convMqlSal = totalMql > 0 ? (totalSal / totalMql)*100 : null;
+  const convSalMat = totalSal > 0 ? (totalMat / totalSal)*100 : null;
 
-  const fmt = (v: number | null, prefix = 'R$') =>
+  const fmt    = (v: number | null, prefix = 'R$') =>
     v === null ? 'N/A' : `${prefix}${v.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`;
   const fmtPct = (v: number | null) =>
     v === null ? 'N/A' : `${v.toFixed(1)}%`;
 
   return `
 ## Benchmarks da base completa (referência para sua análise)
+Nota: investimento vem de course_name_campanha; leads/mql/tickets/matriculas vem de course_name_captacao.
 - Total linhas na base: ${allData.length.toLocaleString('pt-BR')}
 - Investimento total: ${fmt(totalInv)}
 - Total MQLs: ${totalMql.toLocaleString('pt-BR')} | Total SALs (tickets): ${totalSal.toLocaleString('pt-BR')} | Total Matrículas: ${totalMat.toLocaleString('pt-BR')}
@@ -150,6 +157,11 @@ export function buildAnalystContext(params: {
       metrica_principal: primaryMetric || null,
       metricas_resumo: metricSummaries,
       metadata: executionResult.metadata,
+      nota_campos_curso: [
+        'investimento/impressoes/cliques → agregados de course_name_campanha',
+        'leads/mql/inscricoes/tickets/matriculas → agregados de course_name_captacao',
+        'Filtros de curso foram aplicados seletivamente por universo de metrica.',
+      ],
     },
     resultados_completos: compactAllRows,
     recortes: compactAllRows ? undefined : {
