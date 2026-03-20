@@ -392,15 +392,18 @@ function finalise(
     if (metricsLower.includes('conv_mql_ticket')) g.conv_mql_ticket = mql > 0 ? (sal / mql) * 100 : null;
     if (metricsLower.includes('conv_ticket_mat')) g.conv_ticket_mat = sal > 0 ? (mat / sal) * 100 : null;
 
-    // Sync named fields from private accumulators if explicitly requested
-    if (metricsLower.includes('investimento') && g.investimento == null) g.investimento = g._inv ?? 0;
-    if (metricsLower.includes('impressoes')   && g.impressoes   == null) g.impressoes   = g._imp ?? 0;
-    if (metricsLower.includes('cliques')      && g.cliques      == null) g.cliques      = g._cliq ?? 0;
-    if (metricsLower.includes('mql')          && g.mql          == null) g.mql          = g._mql ?? 0;
-    if (metricsLower.includes('leads')        && g.leads        == null) g.leads        = g._leads ?? 0;
-    if (metricsLower.includes('matriculas')   && g.matriculas   == null) g.matriculas   = g._mat ?? 0;
-    if (metricsLower.includes('tickets')      && g.tickets      == null) g.tickets      = g._sal ?? 0;
-    if (metricsLower.includes('inscricoes')   && g.inscricoes   == null) g.inscricoes   = g._ins ?? 0;
+    // Always expose base accumulators as named fields.
+    // Derived metrics (cac, cpmql…) use the private accumulators for calculation,
+    // but the output row must also show the named fields so the Analyst can display
+    // them — even when the Planner didn't list them explicitly in plan.metrics.
+    if (g.investimento == null) g.investimento = g._inv  ?? 0;
+    if (g.impressoes   == null) g.impressoes   = g._imp  ?? 0;
+    if (g.cliques      == null) g.cliques      = g._cliq ?? 0;
+    if (g.mql          == null) g.mql          = g._mql  ?? 0;
+    if (g.leads        == null) g.leads        = g._leads ?? 0;
+    if (g.matriculas   == null) g.matriculas   = g._mat  ?? 0;
+    if (g.tickets      == null) g.tickets      = g._sal  ?? 0;
+    if (g.inscricoes   == null) g.inscricoes   = g._ins  ?? 0;
 
     delete g._inv;  delete g._imp;  delete g._cliq;
     delete g._leads; delete g._leadsIns;
